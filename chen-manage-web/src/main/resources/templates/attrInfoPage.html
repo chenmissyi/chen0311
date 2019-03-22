@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <meta charset="UTF-8">
+        <title>Title</title>
+    </head>
+    <body>
+        <div  id="dlg" class="easyui-dialog" title="编辑属性" style="width:600px;height:500px;"
+              closed="true"  data-options="iconCls:'icon-save',resizable:true,modal:true" buttons="#bb" >
+
+            <br/>
+            <label>属性名称:</label>
+            <input  id="attrName" name="attrName" class="easyui-textbox" data-options="" style="width:100px"/>
+
+            <br/><br/>
+            <table id="dg_av" class="easyui-datagrid" title="属性值列表"></table>
+
+        </div>
+
+        <div id="bb">
+            <a href="#" class="easyui-linkbutton" onclick="saveAttr()">保存</a>
+            <a href="#" class="easyui-linkbutton">关闭</a>
+        </div>
+        <script language="JavaScript">
+            function saveAttr() {
+                var ctg3Id = $("#ctg3ForAttrList").combobox("getValue");
+                var attrName = $("#attrName").val();
+                var attrInfo = {};
+                attrInfo["attrName"] = attrName;
+                attrInfo["catalog3Id"] = ctg3Id;
+                //获取添加页面中的所有行
+                var rows = $("#dg_av").datagrid("getRows")
+                for (var i = 0; i < rows.length; i++) {
+                    //技巧：与bean中的属性同名可以借助springmvc直接注入到实体bean中，即使是list也可以。
+                    // attrInfo["attrValueList["+i+"].id"]=rows[i].id;
+                    attrInfo["attrValueList["+i+"].valueName"]=rows[i].valueName;
+                }
+
+
+                // 点击保存把数据保存到数据库
+                $.post("saveAttr",attrInfo,function (data) {
+                    //关闭添加html的窗口
+                    $("#dlg").dialog("close");
+                    //刷新页面
+                    $("#dg").datagrid("reload","getAttrList?catalog3Id="+ctg3Id);
+                })
+            }
+
+            function initAttrValueDatagrid(attrInfo){
+                datagrid = $("#dg_av").datagrid({
+                    columns: [[
+                        {field: 'id', title: '编号', width: '20%'},
+                        {
+                            field: 'valueName', title: '属性值名称', width: '80%',
+                            editor: {
+                                type: 'validatebox', options: {required: true}  //必填项
+                            }
+                        }
+                    ]],
+                    toolbar: [{
+                        text: '添加',
+                        iconCls: 'icon-add',
+                        handler: function () {
+                            //新增一行
+                            $("#dg_av").datagrid("appendRow",{
+                                id:"",valueName:""
+                            });
+                        }
+                    }, '-',
+                        {
+                            text: '删除',
+                            iconCls: 'icon-remove',
+                            handler: function () {
+                                //获取选中行
+                                var dg_av = $("#dg_av").datagrid("getSelected");
+                                //获取选中行号
+                                var rowNum = $("#dg_av").datagrid("getRowIndex",dg_av);
+                                //删除
+                                $("#dg_av").datagrid("deleteRow",rowNum);
+                            }
+                        }],
+                    onDblClickRow: function (rowIndex, rowData) {
+                        //双击开启编辑行
+                        datagrid.datagrid("beginEdit", rowIndex);
+                        //设定当失去焦点时,退出编辑状态
+                        var valueName = rowData.valueName;
+                        $("input.datagrid-editable-input").val(valueName).bind("blur",function(evt){
+                            datagrid.datagrid('endEdit',rowIndex);
+                        });
+                    }
+
+                })
+
+                if(attrInfo){
+                    //给attrName赋值
+                    $("attrName").tagbox("setText",attrInfo.attrName);
+                    //给属性表赋值
+                    // $('#dg_av').datagrid({url:'getAttrValueList?attrId='+attrInfo.id});
+                    // $("#attrId").val(attrInfo.id);
+
+
+                }
+            }
+        </script>
+    </body>
+</html>
